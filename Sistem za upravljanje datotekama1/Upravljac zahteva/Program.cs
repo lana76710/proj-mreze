@@ -2,8 +2,7 @@
 using System.Collections.Generic;
 using System.Net;
 using System.Net.Sockets;
-
-
+using Common;
 namespace Upravljac_zahteva
 {
     internal class Program
@@ -12,7 +11,7 @@ namespace Upravljac_zahteva
         private const int SERVER_TCP_PORT = 6000; // RM se kači na Server
         private const string SERVER_IP = "127.0.0.1";
 
-        //static List<Zahtev> aktivniZahtevi = new List<Zahtev>();
+        static List<Zahtev> aktivniZahtevi = new List<Zahtev>();
 
         static void Main(string[] args)
         {

@@ -6,7 +6,10 @@ using System.Threading.Tasks;
 
 namespace Common
 {
-    internal class Operacije
+    public enum Operacije
     {
+        Dodavanje,
+        Izmena,
+        Brisanje
     }
 }

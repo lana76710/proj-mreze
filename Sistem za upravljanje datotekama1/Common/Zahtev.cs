@@ -6,7 +6,19 @@ using System.Threading.Tasks;
 
 namespace Common
 {
-    internal class Zahtev
+    public class Zahtev
     {
+        public string NazivDatoteke { get; set; }
+        public Operacije Operacija { get; set; }
+
+        public Zahtev()
+        {
+        }
+
+        public Zahtev(string nazivDatoteke, Operacije operacija)
+        {
+            NazivDatoteke = nazivDatoteke;
+            Operacija = operacija;
+        }
     }
 }

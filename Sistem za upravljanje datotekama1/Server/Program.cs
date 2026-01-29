@@ -21,6 +21,25 @@ namespace Server
             UdpClient udp = new UdpClient(UDP_PORT);
             Console.WriteLine($"UDP otvoren na portu {UDP_PORT}");
 
+            // Primanje PRIJAVA poruka (jednostavno, minimalno)
+            Console.WriteLine("Cekam PRIJAVA klijenata...");
+
+            var remoteEP = new IPEndPoint(IPAddress.Any, 0);
+
+            // primamo samo jednu poruku za test
+            byte[] receivedBytes = udp.Receive(ref remoteEP);
+            string message = System.Text.Encoding.UTF8.GetString(receivedBytes);
+
+            Console.WriteLine($"Primljena poruka od {remoteEP}: {message}");
+
+            // odgovor klijentu sa TCP portom za RM (minimalno)
+            string response = "TCP_PORT:" + TCP_PORT;
+            byte[] responseBytes = System.Text.Encoding.UTF8.GetBytes(response);
+            udp.Send(responseBytes, responseBytes.Length, remoteEP);
+
+            Console.WriteLine("Odgovor poslat klijentu. Test PRIJAVA gotov!");
+
+
             // TCP utičnica (RM konekcija)
             TcpListener tcpListener = new TcpListener(IPAddress.Any, TCP_PORT);
             tcpListener.Start();
