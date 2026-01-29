@@ -1,11 +1,12 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
 
 namespace Common
 {
-    [Serializable]
-    public class Zahtev
+    internal class Zahtev
     {
-        public string PutanjaDoDatoteke { get; set; } = "";
-        public Operacija Operacija { get; set; }
     }
 }

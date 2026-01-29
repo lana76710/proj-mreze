@@ -1,9 +1,12 @@
-﻿namespace Common
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace Common
 {
-    public enum Operacija
+    internal class Operacije
     {
-        Dodavanje,
-        Izmena,
-        Uklanjanje
     }
 }
