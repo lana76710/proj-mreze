@@ -5,3 +5,11 @@ C:\Users\Lana\OneDrive - Univerzitet u Novom Sadu\Desktop\Sistem za upravljanje 
 C:\Users\Lana\OneDrive - Univerzitet u Novom Sadu\Desktop\Sistem za upravljanje datotekama1\Common\obj\Debug\Common.csproj.CoreCompileInputs.cache
 C:\Users\Lana\OneDrive - Univerzitet u Novom Sadu\Desktop\Sistem za upravljanje datotekama1\Common\obj\Debug\Common.exe
 C:\Users\Lana\OneDrive - Univerzitet u Novom Sadu\Desktop\Sistem za upravljanje datotekama1\Common\obj\Debug\Common.pdb
+C:\Users\Lana\OneDrive - Univerzitet u Novom Sadu\Desktop\gitmreze\Sistem za upravljanje datotekama1\Common\bin\Debug\Common.exe.config
+C:\Users\Lana\OneDrive - Univerzitet u Novom Sadu\Desktop\gitmreze\Sistem za upravljanje datotekama1\Common\bin\Debug\Common.exe
+C:\Users\Lana\OneDrive - Univerzitet u Novom Sadu\Desktop\gitmreze\Sistem za upravljanje datotekama1\Common\bin\Debug\Common.pdb
+C:\Users\Lana\OneDrive - Univerzitet u Novom Sadu\Desktop\gitmreze\Sistem za upravljanje datotekama1\Common\obj\Debug\Common.csproj.AssemblyReference.cache
+C:\Users\Lana\OneDrive - Univerzitet u Novom Sadu\Desktop\gitmreze\Sistem za upravljanje datotekama1\Common\obj\Debug\Common.exe.config
+C:\Users\Lana\OneDrive - Univerzitet u Novom Sadu\Desktop\gitmreze\Sistem za upravljanje datotekama1\Common\obj\Debug\Common.csproj.CoreCompileInputs.cache
+C:\Users\Lana\OneDrive - Univerzitet u Novom Sadu\Desktop\gitmreze\Sistem za upravljanje datotekama1\Common\obj\Debug\Common.exe
+C:\Users\Lana\OneDrive - Univerzitet u Novom Sadu\Desktop\gitmreze\Sistem za upravljanje datotekama1\Common\obj\Debug\Common.pdb
