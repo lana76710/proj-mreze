@@ -45,7 +45,6 @@
   <ItemGroup>
     <Compile Include="Datoteka.cs" />
     <Compile Include="Operacije.cs" />
-    <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Zahtev.cs" />
   </ItemGroup>
