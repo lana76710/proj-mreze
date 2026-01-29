@@ -9,8 +9,6 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Upravljac zahteva", "Upravl
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Client", "Client\Client.csproj", "{ED33C1A0-1D39-4A83-BD88-462B4DCFFF09}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Common", "Common\Properties\Common\Common.csproj", "{15BF3CEA-FE34-42DC-B629-79AD85DFBB4A}"
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -29,10 +27,6 @@ Global
 		{ED33C1A0-1D39-4A83-BD88-462B4DCFFF09}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{ED33C1A0-1D39-4A83-BD88-462B4DCFFF09}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{ED33C1A0-1D39-4A83-BD88-462B4DCFFF09}.Release|Any CPU.Build.0 = Release|Any CPU
-		{15BF3CEA-FE34-42DC-B629-79AD85DFBB4A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{15BF3CEA-FE34-42DC-B629-79AD85DFBB4A}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{15BF3CEA-FE34-42DC-B629-79AD85DFBB4A}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{15BF3CEA-FE34-42DC-B629-79AD85DFBB4A}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
