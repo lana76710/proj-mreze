@@ -1,56 +1,58 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Net;
 using System.Net.Sockets;
-using Common;
+using System.Text;
 
 namespace Server
 {
     internal class Program
     {
-        private const int UDP_PORT = 5000; // prijava klijenata
-        private const int TCP_PORT = 6000; // komunikacija sa upravljačem zahteva
+        private const int UDP_PORT = 5000;   // UDP prijava klijenata
+        private const int TCP_PORT = 6000;   // TCP veza sa RM
+        private const int RM_TCP_PORT = 7000; // RM port za klijente (server šalje klijentu)
 
-        static List<Datoteka> datoteke = new List<Datoteka>();
+        private const int BUFFER_SIZE = 1024;
 
         static void Main(string[] args)
         {
             Console.WriteLine("=== SERVER (Repozitorijum) ===");
 
-            // UDP utičnica (prijava klijenata)
-            UdpClient udp = new UdpClient(UDP_PORT);
+           
+            Socket udpSocket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
+            udpSocket.Bind(new IPEndPoint(IPAddress.Any, UDP_PORT));
             Console.WriteLine($"UDP otvoren na portu {UDP_PORT}");
 
-            // Primanje PRIJAVA poruka (jednostavno, minimalno)
-            Console.WriteLine("Cekam PRIJAVA klijenata...");
+            
+            Socket listenSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+            listenSocket.Bind(new IPEndPoint(IPAddress.Any, TCP_PORT));
+            listenSocket.Listen(10);
+            Console.WriteLine($"TCP otvoren na portu {TCP_PORT} (cekam RM...)"); 
 
-            var remoteEP = new IPEndPoint(IPAddress.Any, 0);
+         
+            Socket rmSocket = listenSocket.Accept(); 
+            Console.WriteLine($"RM povezan: {rmSocket.RemoteEndPoint}");
 
-            // primamo samo jednu poruku za test
-            byte[] receivedBytes = udp.Receive(ref remoteEP);
-            string message = System.Text.Encoding.UTF8.GetString(receivedBytes);
+         
+            byte[] buffer = new byte[BUFFER_SIZE];
 
-            Console.WriteLine($"Primljena poruka od {remoteEP}: {message}");
+            while (true)
+            {
+                EndPoint remoteEP = new IPEndPoint(IPAddress.Any, 0);
+                int bytes = udpSocket.ReceiveFrom(buffer, ref remoteEP); 
+                string msg = Encoding.UTF8.GetString(buffer, 0, bytes);
 
-            // odgovor klijentu sa TCP portom za RM (minimalno)
-            string response = "TCP_PORT:" + TCP_PORT;
-            byte[] responseBytes = System.Text.Encoding.UTF8.GetBytes(response);
-            udp.Send(responseBytes, responseBytes.Length, remoteEP);
+                Console.WriteLine($"UDP primljeno od {remoteEP}: {msg}");
 
-            Console.WriteLine("Odgovor poslat klijentu. Test PRIJAVA gotov!");
+                if (msg.StartsWith("PRIJAVA"))
+                {
+                    
+                    string response = $"RM_TCP_PORT:{RM_TCP_PORT}";
+                    byte[] respBytes = Encoding.UTF8.GetBytes(response);
 
-
-            // TCP utičnica (RM konekcija)
-            TcpListener tcpListener = new TcpListener(IPAddress.Any, TCP_PORT);
-            tcpListener.Start();
-            Console.WriteLine($"TCP otvoren na portu {TCP_PORT} (ceka RM...)");
-
-            // Prihvati RM vezu (za konfiguraciju je dovoljno da se poveze)
-            TcpClient rm = tcpListener.AcceptTcpClient();
-            Console.WriteLine("RM se povezao na server!");
-
-            Console.WriteLine("Konfiguracija gotova. (Za sada ne obradjujem poruke u zadatku 2)");
-            Console.ReadLine();
+                    udpSocket.SendTo(respBytes, remoteEP); 
+                    Console.WriteLine($"UDP odgovor poslat: {response}");
+                }
+            }
         }
     }
 }
