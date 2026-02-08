@@ -60,7 +60,7 @@ namespace Client
 
             while (true)
             {
-                Console.WriteLine("\n1) PROCITAJ  2) DODAJ  3) IZMENI  4) UKLONI");
+                Console.WriteLine("\n1) PROCITAJ  2) DODAJ  3) IZMENI  4) UKLONI 5) STATISTIKA");
                 Console.Write("Izbor: ");
                 string izbor = Console.ReadLine();
 
@@ -168,6 +168,26 @@ namespace Client
                     byte[] ok = new byte[BUFFER_SIZE];
                     int okBytes = rmSocket.Receive(ok);
                     Console.WriteLine(Encoding.UTF8.GetString(ok, 0, okBytes));
+                }
+                else if (izbor == "5")
+                {
+                    udpSocket.SendTo(Encoding.UTF8.GetBytes("STATISTIKA"), serverEP);
+
+                    byte[] buffer2 = new byte[BUFFER_SIZE];
+                    EndPoint ep = new IPEndPoint(IPAddress.Any, 0);
+                    int bytes2 = udpSocket.ReceiveFrom(buffer2, ref ep);
+
+                     bf = new BinaryFormatter();
+                     ms = new MemoryStream(buffer2, 0, bytes2);
+                    Statistika s = (Statistika)bf.Deserialize(ms);
+
+                    Console.WriteLine("\n--- STATISTIKA ---");
+                    foreach (var par in s.BrojDatotekaPoAutoru)
+                    {
+                        Console.WriteLine($"{par.Key}: {par.Value}");
+                    }
+
+                    Console.WriteLine($"Ukupna velicina: {s.UkupnaVelicina} bajtova");
                 }
             }
         }

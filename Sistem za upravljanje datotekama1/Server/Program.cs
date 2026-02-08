@@ -49,6 +49,33 @@ namespace Server
                         bf.Serialize(ms, datoteke);
                         udpSocket.SendTo(ms.ToArray(), remoteEP);
                     }
+                    else if (msg == "STATISTIKA")
+                    {
+                        Statistika s = new Statistika();
+                        s.BrojDatotekaPoAutoru = new Dictionary<string, int>();
+                        s.UkupnaVelicina = 0;
+
+                        for (int i = 0; i < datoteke.Count; i++)
+                        {
+                            Datoteka d = datoteke[i];
+
+                            // broj datoteka po autoru
+                            if (!s.BrojDatotekaPoAutoru.ContainsKey(d.Autor))
+                                s.BrojDatotekaPoAutoru[d.Autor] = 0;
+
+                            s.BrojDatotekaPoAutoru[d.Autor]++;
+
+                            // ukupna velicina (broj bajtova = duzina sadrzaja)
+                            if (d.Sadrzaj != null)
+                                s.UkupnaVelicina += d.Sadrzaj.Length;
+                        }
+
+                        BinaryFormatter bf = new BinaryFormatter();
+                        MemoryStream ms = new MemoryStream();
+                        bf.Serialize(ms, s);
+
+                        udpSocket.SendTo(ms.ToArray(), remoteEP);
+                    }
                 }
             });
             udpThread.IsBackground = true;
