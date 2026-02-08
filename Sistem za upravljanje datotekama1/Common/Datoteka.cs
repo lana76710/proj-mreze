@@ -1,11 +1,8 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Common
 {
+    [Serializable]
     public class Datoteka
     {
         public string Naziv { get; set; }
@@ -13,9 +10,7 @@ namespace Common
         public string PoslednjaIzmena { get; set; }
         public string Sadrzaj { get; set; }
 
-        public Datoteka()
-        {
-        }
+        public Datoteka() { }
 
         public Datoteka(string naziv, string autor, string poslednjaIzmena, string sadrzaj)
         {

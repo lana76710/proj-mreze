@@ -1,7 +1,12 @@
-﻿using System;
+﻿// ===================== Client/Program.cs =====================
+using System;
+using System.Collections.Generic;
+using System.IO;
 using System.Net;
 using System.Net.Sockets;
+using System.Runtime.Serialization.Formatters.Binary;
 using System.Text;
+using Common;
 
 namespace Client
 {
@@ -9,7 +14,7 @@ namespace Client
     {
         private const string SERVER_IP = "127.0.0.1";
         private const int SERVER_UDP_PORT = 5000;
-        private const int BUFFER_SIZE = 1024;
+        private const int BUFFER_SIZE = 8192;
 
         static void Main(string[] args)
         {
@@ -18,26 +23,153 @@ namespace Client
 
             // UDP socket
             Socket udpSocket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
-
             IPEndPoint serverEP = new IPEndPoint(IPAddress.Parse(SERVER_IP), SERVER_UDP_PORT);
 
-            // SendTo PRIJAVA
+            // PRIJAVA
             string message = "PRIJAVA:" + username;
             byte[] msgBytes = Encoding.UTF8.GetBytes(message);
-            udpSocket.SendTo(msgBytes, serverEP); // SendTo :contentReference[oaicite:7]{index=7}
-            Console.WriteLine("Poslata PRIJAVA (UDP).");
+            udpSocket.SendTo(msgBytes, serverEP);
 
-            // ReceiveFrom odgovor
             byte[] buffer = new byte[BUFFER_SIZE];
             EndPoint remoteEP = new IPEndPoint(IPAddress.Any, 0);
-            int bytes = udpSocket.ReceiveFrom(buffer, ref remoteEP); // ReceiveFrom :contentReference[oaicite:8]{index=8}
+            int bytes = udpSocket.ReceiveFrom(buffer, ref remoteEP);
             string response = Encoding.UTF8.GetString(buffer, 0, bytes);
 
-            Console.WriteLine($"Od servera: {response}");
+            // "RM_TCP_PORT:7000"
+            int rmPort = int.Parse(response.Split(':')[1]);
 
-            udpSocket.Close();
-            Console.WriteLine("Enter za izlaz...");
-            Console.ReadLine();
+            // LISTA
+            udpSocket.SendTo(Encoding.UTF8.GetBytes("LISTA"), serverEP);
+
+            buffer = new byte[BUFFER_SIZE];
+            bytes = udpSocket.ReceiveFrom(buffer, ref remoteEP);
+
+            BinaryFormatter bf = new BinaryFormatter();
+            MemoryStream ms = new MemoryStream(buffer, 0, bytes);
+            List<Datoteka> datoteke = (List<Datoteka>)bf.Deserialize(ms);
+
+            for (int i = 0; i < datoteke.Count; i++)
+                Console.WriteLine($"{datoteke[i].Naziv} ({datoteke[i].Autor}) poslednja promena: {datoteke[i].PoslednjaIzmena}");
+
+            // TCP ka RM
+            Socket rmSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+            rmSocket.Connect(new IPEndPoint(IPAddress.Parse(SERVER_IP), rmPort));
+
+            // prvo username RM-u
+            rmSocket.Send(Encoding.UTF8.GetBytes(username));
+
+            while (true)
+            {
+                Console.WriteLine("\n1) PROCITAJ  2) DODAJ  3) IZMENI  4) UKLONI");
+                Console.Write("Izbor: ");
+                string izbor = Console.ReadLine();
+
+                if (izbor == "1")
+                {
+                    rmSocket.Send(Encoding.UTF8.GetBytes("PROCITAJ"));
+                    Console.Write("Naziv datoteke: ");
+                    rmSocket.Send(Encoding.UTF8.GetBytes(Console.ReadLine()));
+
+                    byte[] b = new byte[BUFFER_SIZE];
+                    int n = rmSocket.Receive(b);
+                    string maybe = Encoding.UTF8.GetString(b, 0, n);
+
+                    if (maybe == "ODBIJENO")
+                    {
+                        Console.WriteLine("ODBIJENO");
+                    }
+                    else
+                    {
+                        // dobili smo objekat Datoteka
+                        bf = new BinaryFormatter();
+                        ms = new MemoryStream(b, 0, n);
+                        Datoteka d = (Datoteka)bf.Deserialize(ms);
+
+                        Console.WriteLine(d.Sadrzaj);
+                    }
+                }
+                else if (izbor == "2")
+                {
+                    rmSocket.Send(Encoding.UTF8.GetBytes("DODAJ"));
+
+                    Datoteka d = new Datoteka();
+                    Console.Write("Naziv: ");
+                    d.Naziv = Console.ReadLine();
+                    Console.Write("Sadrzaj: ");
+                    d.Sadrzaj = Console.ReadLine();
+                    d.Autor = "";            // RM dopunjava
+                    d.PoslednjaIzmena = "";   // server dopunjava
+
+                    bf = new BinaryFormatter();
+                    ms = new MemoryStream();
+                    bf.Serialize(ms, d);
+                    rmSocket.Send(ms.ToArray());
+
+                    byte[] ok = new byte[BUFFER_SIZE];
+                    int okBytes = rmSocket.Receive(ok);
+                    Console.WriteLine(Encoding.UTF8.GetString(ok, 0, okBytes));
+                }
+                else if (izbor == "3")
+                {
+                    rmSocket.Send(Encoding.UTF8.GetBytes("IZMENI"));
+
+                    Zahtev z = new Zahtev();
+                    Console.Write("Naziv datoteke: ");
+                    z.NazivDatoteke = Console.ReadLine();
+                    z.Operacija = Operacije.Izmena;
+
+                    bf = new BinaryFormatter();
+                    ms = new MemoryStream();
+                    bf.Serialize(ms, z);
+                    rmSocket.Send(ms.ToArray());
+
+                    byte[] b = new byte[BUFFER_SIZE];
+                    int n = rmSocket.Receive(b);
+                    string maybe = Encoding.UTF8.GetString(b, 0, n);
+
+                    if (maybe == "ODBIJENO")
+                    {
+                        Console.WriteLine("ODBIJENO");
+                    }
+                    else
+                    {
+                        bf = new BinaryFormatter();
+                        ms = new MemoryStream(b, 0, n);
+                        Datoteka d = (Datoteka)bf.Deserialize(ms);
+
+                        Console.WriteLine("Trenutni sadrzaj: " + d.Sadrzaj);
+                        Console.Write("Novi sadrzaj: ");
+                        d.Sadrzaj = Console.ReadLine();
+
+                        bf = new BinaryFormatter();
+                        ms = new MemoryStream();
+                        bf.Serialize(ms, d);
+                        rmSocket.Send(ms.ToArray());
+
+                        byte[] ok = new byte[BUFFER_SIZE];
+                        int okBytes = rmSocket.Receive(ok);
+                        Console.WriteLine(Encoding.UTF8.GetString(ok, 0, okBytes));
+                    }
+                }
+                else if (izbor == "4")
+                {
+                    rmSocket.Send(Encoding.UTF8.GetBytes("UKLONI"));
+
+                    Zahtev z = new Zahtev();
+                    Console.Write("Naziv datoteke: ");
+                    z.NazivDatoteke = Console.ReadLine();
+                    z.Operacija = Operacije.Brisanje;
+
+                    bf = new BinaryFormatter();
+                    ms = new MemoryStream();
+                    bf.Serialize(ms, z);
+                    rmSocket.Send(ms.ToArray());
+
+                    byte[] ok = new byte[BUFFER_SIZE];
+                    int okBytes = rmSocket.Receive(ok);
+                    Console.WriteLine(Encoding.UTF8.GetString(ok, 0, okBytes));
+                }
+            }
         }
     }
 }
