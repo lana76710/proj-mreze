@@ -1,5 +1,4 @@
-﻿// ===================== Client/Program.cs =====================
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Net;
@@ -13,7 +12,6 @@ namespace Client
     internal class Program
     {
         private const string SERVER_IP = "127.0.0.1";
-       // private const int SERVER_UDP_PORT = 5000;
         private const int BUFFER_SIZE = 8192;
 
         static void Main(string[] args)
@@ -21,30 +19,24 @@ namespace Client
             Console.Write("Unesite vase korisnicko ime: ");
             string username = Console.ReadLine();
 
-            int serverPort=int.Parse(args[0]);
+            int serverPort = int.Parse(args[0]);
 
-            // UDP socket
             Socket udpSocket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
             IPEndPoint serverEP = new IPEndPoint(IPAddress.Parse(SERVER_IP), serverPort);
 
-            // PRIJAVA
+            // PRIJAVA (UDP)
             string message = "PRIJAVA:" + username;
-            byte[] msgBytes = Encoding.UTF8.GetBytes(message);
-            udpSocket.SendTo(msgBytes, serverEP);
+            udpSocket.SendTo(Encoding.UTF8.GetBytes(message), serverEP);
 
             byte[] buffer = new byte[BUFFER_SIZE];
             EndPoint remoteEP = new IPEndPoint(IPAddress.Any, 0);
             int bytes = udpSocket.ReceiveFrom(buffer, ref remoteEP);
             string response = Encoding.UTF8.GetString(buffer, 0, bytes);
 
-            // "RM_TCP_PORT:7000"
             int rmPort = int.Parse(response.Split(':')[1]);
 
-            // LISTA
+            // LISTA (UDP)
             udpSocket.SendTo(Encoding.UTF8.GetBytes("LISTA"), serverEP);
-
-     
-
 
             buffer = new byte[BUFFER_SIZE];
             bytes = udpSocket.ReceiveFrom(buffer, ref remoteEP);
@@ -65,7 +57,7 @@ namespace Client
 
             while (true)
             {
-                Console.WriteLine("\n1) PROCITAJ  2) DODAJ  3) IZMENI  4) UKLONI 5) STATISTIKA");
+                Console.WriteLine("\n1) PROCITAJ  2) DODAJ  3) IZMENI  4) UKLONI  5) STATISTIKA");
                 Console.Write("Izbor: ");
                 string izbor = Console.ReadLine();
 
@@ -85,11 +77,9 @@ namespace Client
                     }
                     else
                     {
-                        // dobili smo objekat Datoteka
                         bf = new BinaryFormatter();
                         ms = new MemoryStream(b, 0, n);
                         Datoteka d = (Datoteka)bf.Deserialize(ms);
-
                         Console.WriteLine(d.Sadrzaj);
                     }
                 }
@@ -102,8 +92,8 @@ namespace Client
                     d.Naziv = Console.ReadLine();
                     Console.Write("Sadrzaj: ");
                     d.Sadrzaj = Console.ReadLine();
-                    d.Autor = "";            // RM dopunjava
-                    d.PoslednjaIzmena = "";   // server dopunjava
+                    d.Autor = "";           // RM dopunjava
+                    d.PoslednjaIzmena = "";  // server dopunjava
 
                     bf = new BinaryFormatter();
                     ms = new MemoryStream();
@@ -141,7 +131,7 @@ namespace Client
                         bf = new BinaryFormatter();
                         ms = new MemoryStream(b, 0, n);
                         Datoteka d = (Datoteka)bf.Deserialize(ms);
-                        //zadatak 6
+
                         Console.WriteLine("Trenutni sadrzaj: " + d.Sadrzaj);
                         Console.WriteLine("1) Zameni ceo sadrzaj");
                         Console.WriteLine("2) Dodaj na postojeci sadrzaj");
@@ -156,14 +146,14 @@ namespace Client
                         else if (izborIzmene == "2")
                         {
                             Console.Write("Tekst za dodavanje: ");
-                            string dodatak = Console.ReadLine();
-                            d.Sadrzaj += dodatak;
+                            d.Sadrzaj += Console.ReadLine();
                         }
 
                         bf = new BinaryFormatter();
                         ms = new MemoryStream();
                         bf.Serialize(ms, d);
                         rmSocket.Send(ms.ToArray());
+
                         byte[] ok = new byte[BUFFER_SIZE];
                         int okBytes = rmSocket.Receive(ok);
                         Console.WriteLine(Encoding.UTF8.GetString(ok, 0, okBytes));
@@ -195,15 +185,13 @@ namespace Client
                     EndPoint ep = new IPEndPoint(IPAddress.Any, 0);
                     int bytes2 = udpSocket.ReceiveFrom(buffer2, ref ep);
 
-                     bf = new BinaryFormatter();
-                     ms = new MemoryStream(buffer2, 0, bytes2);
+                    bf = new BinaryFormatter();
+                    ms = new MemoryStream(buffer2, 0, bytes2);
                     Statistika s = (Statistika)bf.Deserialize(ms);
 
                     Console.WriteLine("\n--- STATISTIKA ---");
                     foreach (var par in s.BrojDatotekaPoAutoru)
-                    {
                         Console.WriteLine($"{par.Key}: {par.Value}");
-                    }
 
                     Console.WriteLine($"Ukupna velicina: {s.UkupnaVelicina} bajtova");
                 }

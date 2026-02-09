@@ -1,4 +1,5 @@
-﻿using System;
+﻿// ===================== Server/Program.cs =====================
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Net;
@@ -59,13 +60,10 @@ namespace Server
                         {
                             Datoteka d = datoteke[i];
 
-                            // broj datoteka po autoru
                             if (!s.BrojDatotekaPoAutoru.ContainsKey(d.Autor))
                                 s.BrojDatotekaPoAutoru[d.Autor] = 0;
-
                             s.BrojDatotekaPoAutoru[d.Autor]++;
 
-                            // ukupna velicina (broj bajtova = duzina sadrzaja)
                             if (d.Sadrzaj != null)
                                 s.UkupnaVelicina += d.Sadrzaj.Length;
                         }
@@ -73,7 +71,6 @@ namespace Server
                         BinaryFormatter bf = new BinaryFormatter();
                         MemoryStream ms = new MemoryStream();
                         bf.Serialize(ms, s);
-
                         udpSocket.SendTo(ms.ToArray(), remoteEP);
                     }
                 }

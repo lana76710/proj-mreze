@@ -1,4 +1,5 @@
-﻿using System;
+﻿// ===================== Upravlac_zahteva/Program.cs =====================
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Net;
@@ -20,212 +21,197 @@ namespace Upravlac_zahteva
         {
             Console.WriteLine("=== UPRAVLJAC ZAHTEVA (RM) ===");
 
-            // 1) TCP listen za klijente
+            // listen za klijente
             Socket listenClients = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
             listenClients.Bind(new IPEndPoint(IPAddress.Any, RM_TCP_PORT));
             listenClients.Listen(10);
-            Console.WriteLine($"TCP za klijente otvoren na portu {RM_TCP_PORT}");
 
-            // 2) TCP connect ka serveru
+            // connect ka serveru
             Socket rmToServer = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
             rmToServer.Connect(new IPEndPoint(IPAddress.Parse(SERVER_IP), SERVER_TCP_PORT));
-            Console.WriteLine($"Povezan sa serverom: {rmToServer.RemoteEndPoint}");
 
-            // 3) Accept 1 klijent
-            Console.WriteLine("Cekam klijenta...");
-            Socket client = listenClients.Accept();
-            Console.WriteLine("Klijent povezan.");
+            // ===== ZADATAK 7: vise klijenata preko Select =====
+            List<Socket> clients = new List<Socket>();
+            Dictionary<Socket, string> userByClient = new Dictionary<Socket, string>();
 
-            // prvo korisnicko ime (string)
-            byte[] userBuf = new byte[BUFFER_SIZE];
-            int userBytes = client.Receive(userBuf);
-            string username = Encoding.UTF8.GetString(userBuf, 0, userBytes);
-
-            // lista aktivnih zahteva (IZMENA / BRISANJE)
+            // ===== ZADATAK 4/6: aktivni zahtevi (blokiraju datoteku dok klijent ne zavrsi izmenu/brisanje) =====
             List<Zahtev> aktivniZahtevi = new List<Zahtev>();
 
             while (true)
             {
-                // primi komandu
-                byte[] cmdBuf = new byte[BUFFER_SIZE];
-                int cmdBytes = client.Receive(cmdBuf);
-                string cmd = Encoding.UTF8.GetString(cmdBuf, 0, cmdBytes);
+                List<Socket> readList = new List<Socket>();
+                readList.Add(listenClients);
+                for (int i = 0; i < clients.Count; i++) readList.Add(clients[i]);
 
-                if (cmd == "DODAJ")
+                Socket.Select(readList, null, null, -1);
+
+                for (int i = 0; i < readList.Count; i++)
                 {
-                    // primi Datoteka
-                    byte[] b = new byte[BUFFER_SIZE];
-                    int n = client.Receive(b);
+                    Socket s = readList[i];
 
-                    BinaryFormatter bf = new BinaryFormatter();
-                    MemoryStream ms = new MemoryStream(b, 0, n);
-                    Datoteka d = (Datoteka)bf.Deserialize(ms);
-
-                    d.Autor = username;
-
-                    // prosledi serveru
-                    rmToServer.Send(Encoding.UTF8.GetBytes("DODAJ"));
-
-                    bf = new BinaryFormatter();
-                    ms = new MemoryStream();
-                    bf.Serialize(ms, d);
-                    rmToServer.Send(ms.ToArray());
-
-                    // potvrda servera -> klijentu
-                    byte[] okBuf = new byte[BUFFER_SIZE];
-                    int okBytes = rmToServer.Receive(okBuf);
-                    client.Send(okBuf, okBytes, SocketFlags.None);
-                }
-                else if (cmd == "PROCITAJ")
-                {
-                    // primi naziv
-                    byte[] nameBuf = new byte[BUFFER_SIZE];
-                    int nb = client.Receive(nameBuf);
-                    string naziv = Encoding.UTF8.GetString(nameBuf, 0, nb);
-
-                    // server: PROCITAJ + naziv
-                    rmToServer.Send(Encoding.UTF8.GetBytes("PROCITAJ"));
-                    rmToServer.Send(Encoding.UTF8.GetBytes(naziv));
-
-                    // server prvo vraća "OK" ili "ODBIJENO"
-                    byte[] statusBuf = new byte[BUFFER_SIZE];
-                    int sb = rmToServer.Receive(statusBuf);
-                    string status = Encoding.UTF8.GetString(statusBuf, 0, sb);
-
-                    if (status == "ODBIJENO")
+                    if (s == listenClients)
                     {
-                        client.Send(Encoding.UTF8.GetBytes("ODBIJENO"));
-                    }
-                    else
-                    {
-                        // primi objekat Datoteka i prosledi klijentu
-                        byte[] objBuf = new byte[BUFFER_SIZE];
-                        int ob = rmToServer.Receive(objBuf);
+                        Socket c = listenClients.Accept();
+                        clients.Add(c);
 
-                        client.Send(objBuf, ob, SocketFlags.None);
-                    }
-                }
-                else if (cmd == "IZMENI")
-                {
-                    // primi Zahtev
-                    byte[] b = new byte[BUFFER_SIZE];
-                    int n = client.Receive(b);
-
-                    BinaryFormatter bf = new BinaryFormatter();
-                    MemoryStream ms = new MemoryStream(b, 0, n);
-                    Zahtev z = (Zahtev)bf.Deserialize(ms);
-
-                    // ===== ZADATAK 4: PROVERA "ZAUZETO" =====
-                    bool zauzeto = false;
-                    for (int i = 0; i < aktivniZahtevi.Count; i++)
-                    {
-                        if (aktivniZahtevi[i].NazivDatoteke == z.NazivDatoteke)
-                        {
-                            zauzeto = true;
-                            break;
-                        }
-                    }
-
-                    if (zauzeto)
-                    {
-                        client.Send(Encoding.UTF8.GetBytes("ODBIJENO"));
+                        // primi username odmah po konekciji
+                        byte[] userBuf = new byte[BUFFER_SIZE];
+                        int userBytes = c.Receive(userBuf);
+                        string username = Encoding.UTF8.GetString(userBuf, 0, userBytes);
+                        userByClient[c] = username;
                         continue;
                     }
-                    // ========================================
 
-                    // tek sad postaje aktivan zahtev
-                    aktivniZahtevi.Add(z);
-
-                    // traži datoteku od servera
-                    rmToServer.Send(Encoding.UTF8.GetBytes("PROCITAJ"));
-                    rmToServer.Send(Encoding.UTF8.GetBytes(z.NazivDatoteke));
-
-                    byte[] statusBuf = new byte[BUFFER_SIZE];
-                    int sb = rmToServer.Receive(statusBuf);
-                    string status = Encoding.UTF8.GetString(statusBuf, 0, sb);
-
-                    if (status == "ODBIJENO")
+                    // cmd
+                    byte[] cmdBuf = new byte[BUFFER_SIZE];
+                    int cmdBytes = s.Receive(cmdBuf);
+                    if (cmdBytes <= 0)
                     {
-                        client.Send(Encoding.UTF8.GetBytes("ODBIJENO"));
-                        aktivniZahtevi.Remove(z);
+                        clients.Remove(s);
+                        userByClient.Remove(s);
+                        continue;
                     }
-                    else
+                    string cmd = Encoding.UTF8.GetString(cmdBuf, 0, cmdBytes);
+                    string usernameClient = userByClient[s];
+
+                    if (cmd == "DODAJ")
                     {
-                        // primi Datoteka sa servera
-                        byte[] objBuf = new byte[BUFFER_SIZE];
-                        int ob = rmToServer.Receive(objBuf);
+                        byte[] b = new byte[BUFFER_SIZE];
+                        int n = s.Receive(b);
 
-                        // prosledi klijentu (da je izmeni)
-                        client.Send(objBuf, ob, SocketFlags.None);
+                        BinaryFormatter bf = new BinaryFormatter();
+                        MemoryStream ms = new MemoryStream(b, 0, n);
+                        Datoteka d = (Datoteka)bf.Deserialize(ms);
 
-                        // primi izmenjenu Datoteka od klijenta
-                        byte[] b2 = new byte[BUFFER_SIZE];
-                        int n2 = client.Receive(b2);
+                        d.Autor = usernameClient;
 
-                        bf = new BinaryFormatter();
-                        ms = new MemoryStream(b2, 0, n2);
-                        Datoteka izmenjena = (Datoteka)bf.Deserialize(ms);
-
-                        izmenjena.Autor = username;
-
-                        // pošalji serveru IZMENI + objekat
-                        rmToServer.Send(Encoding.UTF8.GetBytes("IZMENI"));
-
+                        rmToServer.Send(Encoding.UTF8.GetBytes("DODAJ"));
                         bf = new BinaryFormatter();
                         ms = new MemoryStream();
-                        bf.Serialize(ms, izmenjena);
+                        bf.Serialize(ms, d);
                         rmToServer.Send(ms.ToArray());
 
-                        // odgovor servera -> klijentu
                         byte[] okBuf = new byte[BUFFER_SIZE];
                         int okBytes = rmToServer.Receive(okBuf);
-                        client.Send(okBuf, okBytes, SocketFlags.None);
+                        s.Send(okBuf, okBytes, SocketFlags.None);
+                    }
+                    else if (cmd == "PROCITAJ")
+                    {
+                        byte[] nameBuf = new byte[BUFFER_SIZE];
+                        int nb = s.Receive(nameBuf);
+                        string naziv = Encoding.UTF8.GetString(nameBuf, 0, nb);
+
+                        rmToServer.Send(Encoding.UTF8.GetBytes("PROCITAJ"));
+                        rmToServer.Send(Encoding.UTF8.GetBytes(naziv));
+
+                        byte[] statusBuf = new byte[BUFFER_SIZE];
+                        int sb = rmToServer.Receive(statusBuf);
+                        string status = Encoding.UTF8.GetString(statusBuf, 0, sb);
+
+                        if (status == "ODBIJENO")
+                        {
+                            s.Send(Encoding.UTF8.GetBytes("ODBIJENO"));
+                        }
+                        else
+                        {
+                            byte[] objBuf = new byte[BUFFER_SIZE];
+                            int ob = rmToServer.Receive(objBuf);
+                            s.Send(objBuf, ob, SocketFlags.None);
+                        }
+                    }
+                    else if (cmd == "IZMENI")
+                    {
+                        byte[] b = new byte[BUFFER_SIZE];
+                        int n = s.Receive(b);
+
+                        BinaryFormatter bf = new BinaryFormatter();
+                        MemoryStream ms = new MemoryStream(b, 0, n);
+                        Zahtev z = (Zahtev)bf.Deserialize(ms);
+
+                        // zauzeto?
+                        bool zauzeto = false;
+                        for (int k = 0; k < aktivniZahtevi.Count; k++)
+                            if (aktivniZahtevi[k].NazivDatoteke == z.NazivDatoteke) { zauzeto = true; break; }
+
+                        if (zauzeto)
+                        {
+                            s.Send(Encoding.UTF8.GetBytes("ODBIJENO"));
+                            continue;
+                        }
+
+                        aktivniZahtevi.Add(z);
+
+                        rmToServer.Send(Encoding.UTF8.GetBytes("PROCITAJ"));
+                        rmToServer.Send(Encoding.UTF8.GetBytes(z.NazivDatoteke));
+
+                        byte[] statusBuf = new byte[BUFFER_SIZE];
+                        int sb = rmToServer.Receive(statusBuf);
+                        string status = Encoding.UTF8.GetString(statusBuf, 0, sb);
+
+                        if (status == "ODBIJENO")
+                        {
+                            s.Send(Encoding.UTF8.GetBytes("ODBIJENO"));
+                            aktivniZahtevi.Remove(z);
+                        }
+                        else
+                        {
+                            byte[] objBuf = new byte[BUFFER_SIZE];
+                            int ob = rmToServer.Receive(objBuf);
+                            s.Send(objBuf, ob, SocketFlags.None);
+
+                            byte[] b2 = new byte[BUFFER_SIZE];
+                            int n2 = s.Receive(b2);
+
+                            bf = new BinaryFormatter();
+                            ms = new MemoryStream(b2, 0, n2);
+                            Datoteka izmenjena = (Datoteka)bf.Deserialize(ms);
+                            izmenjena.Autor = usernameClient;
+
+                            rmToServer.Send(Encoding.UTF8.GetBytes("IZMENI"));
+                            bf = new BinaryFormatter();
+                            ms = new MemoryStream();
+                            bf.Serialize(ms, izmenjena);
+                            rmToServer.Send(ms.ToArray());
+
+                            byte[] okBuf = new byte[BUFFER_SIZE];
+                            int okBytes = rmToServer.Receive(okBuf);
+                            s.Send(okBuf, okBytes, SocketFlags.None);
+
+                            aktivniZahtevi.Remove(z);
+                        }
+                    }
+                    else if (cmd == "UKLONI")
+                    {
+                        byte[] b = new byte[BUFFER_SIZE];
+                        int n = s.Receive(b);
+
+                        BinaryFormatter bf = new BinaryFormatter();
+                        MemoryStream ms = new MemoryStream(b, 0, n);
+                        Zahtev z = (Zahtev)bf.Deserialize(ms);
+
+                        bool zauzeto = false;
+                        for (int k = 0; k < aktivniZahtevi.Count; k++)
+                            if (aktivniZahtevi[k].NazivDatoteke == z.NazivDatoteke) { zauzeto = true; break; }
+
+                        if (zauzeto)
+                        {
+                            s.Send(Encoding.UTF8.GetBytes("ODBIJENO"));
+                            continue;
+                        }
+
+                        aktivniZahtevi.Add(z);
+
+                        rmToServer.Send(Encoding.UTF8.GetBytes("UKLONI"));
+                        rmToServer.Send(Encoding.UTF8.GetBytes(z.NazivDatoteke));
+
+                        byte[] okBuf = new byte[BUFFER_SIZE];
+                        int okBytes = rmToServer.Receive(okBuf);
+                        s.Send(okBuf, okBytes, SocketFlags.None);
 
                         aktivniZahtevi.Remove(z);
                     }
-                }
-                else if (cmd == "UKLONI")
-                {
-                    // primi Zahtev
-                    byte[] b = new byte[BUFFER_SIZE];
-                    int n = client.Receive(b);
-
-                    BinaryFormatter bf = new BinaryFormatter();
-                    MemoryStream ms = new MemoryStream(b, 0, n);
-                    Zahtev z = (Zahtev)bf.Deserialize(ms);
-
-                    // ===== ZADATAK 4: PROVERA "ZAUZETO" =====
-                    bool zauzeto = false;
-                    for (int i = 0; i < aktivniZahtevi.Count; i++)
-                    {
-                        if (aktivniZahtevi[i].NazivDatoteke == z.NazivDatoteke)
-                        {
-                            zauzeto = true;
-                            break;
-                        }
-                    }
-
-                    if (zauzeto)
-                    {
-                        client.Send(Encoding.UTF8.GetBytes("ODBIJENO"));
-                        continue;
-                    }
-                    // ========================================
-
-                    aktivniZahtevi.Add(z);
-
-                    // server: UKLONI + naziv
-                    rmToServer.Send(Encoding.UTF8.GetBytes("UKLONI"));
-                    rmToServer.Send(Encoding.UTF8.GetBytes(z.NazivDatoteke));
-
-                    // potvrda/ODBIJENO -> klijentu
-                    byte[] okBuf = new byte[BUFFER_SIZE];
-                    int okBytes = rmToServer.Receive(okBuf);
-                    client.Send(okBuf, okBytes, SocketFlags.None);
-
-                    aktivniZahtevi.Remove(z);
                 }
             }
         }
     }
-}
+}
