@@ -24,7 +24,7 @@ namespace Client
             Socket udpSocket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
             IPEndPoint serverEP = new IPEndPoint(IPAddress.Parse(SERVER_IP), serverPort);
 
-            // PRIJAVA (UDP)
+           
             string message = "PRIJAVA:" + username;
             udpSocket.SendTo(Encoding.UTF8.GetBytes(message), serverEP);
 
@@ -35,7 +35,7 @@ namespace Client
 
             int rmPort = int.Parse(response.Split(':')[1]);
 
-            // LISTA (UDP)
+            
             udpSocket.SendTo(Encoding.UTF8.GetBytes("LISTA"), serverEP);
 
             buffer = new byte[BUFFER_SIZE];
@@ -48,11 +48,11 @@ namespace Client
             for (int i = 0; i < datoteke.Count; i++)
                 Console.WriteLine($"{datoteke[i].Naziv} ({datoteke[i].Autor}) poslednja promena: {datoteke[i].PoslednjaIzmena}");
 
-            // TCP ka RM
+            
             Socket rmSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
             rmSocket.Connect(new IPEndPoint(IPAddress.Parse(SERVER_IP), rmPort));
 
-            // prvo username RM-u
+        
             rmSocket.Send(Encoding.UTF8.GetBytes(username));
 
             while (true)

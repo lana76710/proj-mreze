@@ -12,8 +12,8 @@ namespace Upravlac_zahteva
 {
     internal class Program
     {
-        private const int RM_TCP_PORT = 7000;      // TCP za klijente
-        private const int SERVER_TCP_PORT = 6000;  // TCP ka serveru
+        private const int RM_TCP_PORT = 7000;      
+        private const int SERVER_TCP_PORT = 6000;  
         private const string SERVER_IP = "127.0.0.1";
         private const int BUFFER_SIZE = 8192;
 
@@ -21,21 +21,20 @@ namespace Upravlac_zahteva
         {
             Console.WriteLine("=== UPRAVLJAC ZAHTEVA (RM) ===");
 
-            // listen za klijente
+            
             Socket listenClients = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
             listenClients.Bind(new IPEndPoint(IPAddress.Any, RM_TCP_PORT));
             listenClients.Listen(10);
 
-            // connect ka serveru
+           
             Socket rmToServer = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
             rmToServer.Connect(new IPEndPoint(IPAddress.Parse(SERVER_IP), SERVER_TCP_PORT));
 
-            // ===== ZADATAK 7: vise klijenata preko Select =====
             List<Socket> clients = new List<Socket>();
             Dictionary<Socket, string> userByClient = new Dictionary<Socket, string>();
             Dictionary<Socket, Zahtev> pendingEdits = new Dictionary<Socket, Zahtev>();
 
-            // ===== ZADATAK 4/6: aktivni zahtevi (blokiraju datoteku dok klijent ne zavrsi izmenu/brisanje) =====
+            
             List<Zahtev> aktivniZahtevi = new List<Zahtev>();
 
             while (true)
@@ -57,7 +56,7 @@ namespace Upravlac_zahteva
                         Console.WriteLine("Klijent TCP povezan: " + c.RemoteEndPoint);
 
 
-                        // primi username odmah po konekciji
+                       
                         byte[] userBuf = new byte[BUFFER_SIZE];
                         int userBytes = c.Receive(userBuf);
                         string username = Encoding.UTF8.GetString(userBuf, 0, userBytes);
@@ -67,7 +66,7 @@ namespace Upravlac_zahteva
                         continue;
                     }
 
-                    // cmd
+                   
                     byte[] cmdBuf = new byte[BUFFER_SIZE];
                     int cmdBytes = s.Receive(cmdBuf);
                     if (cmdBytes <= 0)
@@ -160,7 +159,7 @@ namespace Upravlac_zahteva
                         MemoryStream ms = new MemoryStream(b, 0, n);
                         Zahtev z = (Zahtev)bf.Deserialize(ms);
 
-                        // zauzeto?
+                     
                         bool zauzeto = false;
                         for (int k = 0; k < aktivniZahtevi.Count; k++)
                             if (aktivniZahtevi[k].NazivDatoteke == z.NazivDatoteke) { zauzeto = true; break; }
