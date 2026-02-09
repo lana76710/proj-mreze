@@ -33,6 +33,7 @@ namespace Upravlac_zahteva
             // ===== ZADATAK 7: vise klijenata preko Select =====
             List<Socket> clients = new List<Socket>();
             Dictionary<Socket, string> userByClient = new Dictionary<Socket, string>();
+            Dictionary<Socket, Zahtev> pendingEdits = new Dictionary<Socket, Zahtev>();
 
             // ===== ZADATAK 4/6: aktivni zahtevi (blokiraju datoteku dok klijent ne zavrsi izmenu/brisanje) =====
             List<Zahtev> aktivniZahtevi = new List<Zahtev>();
@@ -69,6 +70,33 @@ namespace Upravlac_zahteva
                     {
                         clients.Remove(s);
                         userByClient.Remove(s);
+                        if (pendingEdits.TryGetValue(s, out Zahtev pending))
+                        {
+                            aktivniZahtevi.Remove(pending);
+                            pendingEdits.Remove(s);
+                        }
+                        continue;
+                    }
+
+                    if (pendingEdits.TryGetValue(s, out Zahtev aktivnaIzmena))
+                    {
+                        BinaryFormatter bf = new BinaryFormatter();
+                        MemoryStream ms = new MemoryStream(cmdBuf, 0, cmdBytes);
+                        Datoteka izmenjena = (Datoteka)bf.Deserialize(ms);
+                        izmenjena.Autor = userByClient[s];
+
+                        rmToServer.Send(Encoding.UTF8.GetBytes("IZMENI"));
+                        bf = new BinaryFormatter();
+                        ms = new MemoryStream();
+                        bf.Serialize(ms, izmenjena);
+                        rmToServer.Send(ms.ToArray());
+
+                        byte[] okBuf = new byte[BUFFER_SIZE];
+                        int okBytes = rmToServer.Receive(okBuf);
+                        s.Send(okBuf, okBytes, SocketFlags.None);
+
+                        aktivniZahtevi.Remove(aktivnaIzmena);
+                        pendingEdits.Remove(s);
                         continue;
                     }
                     string cmd = Encoding.UTF8.GetString(cmdBuf, 0, cmdBytes);
@@ -158,26 +186,7 @@ namespace Upravlac_zahteva
                             byte[] objBuf = new byte[BUFFER_SIZE];
                             int ob = rmToServer.Receive(objBuf);
                             s.Send(objBuf, ob, SocketFlags.None);
-
-                            byte[] b2 = new byte[BUFFER_SIZE];
-                            int n2 = s.Receive(b2);
-
-                            bf = new BinaryFormatter();
-                            ms = new MemoryStream(b2, 0, n2);
-                            Datoteka izmenjena = (Datoteka)bf.Deserialize(ms);
-                            izmenjena.Autor = usernameClient;
-
-                            rmToServer.Send(Encoding.UTF8.GetBytes("IZMENI"));
-                            bf = new BinaryFormatter();
-                            ms = new MemoryStream();
-                            bf.Serialize(ms, izmenjena);
-                            rmToServer.Send(ms.ToArray());
-
-                            byte[] okBuf = new byte[BUFFER_SIZE];
-                            int okBytes = rmToServer.Receive(okBuf);
-                            s.Send(okBuf, okBytes, SocketFlags.None);
-
-                            aktivniZahtevi.Remove(z);
+                            pendingEdits[s] = z;
                         }
                     }
                     else if (cmd == "UKLONI")
