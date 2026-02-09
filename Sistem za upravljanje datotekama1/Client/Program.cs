@@ -13,7 +13,7 @@ namespace Client
     internal class Program
     {
         private const string SERVER_IP = "127.0.0.1";
-        private const int SERVER_UDP_PORT = 5000;
+       // private const int SERVER_UDP_PORT = 5000;
         private const int BUFFER_SIZE = 8192;
 
         static void Main(string[] args)
@@ -21,9 +21,11 @@ namespace Client
             Console.Write("Unesite vase korisnicko ime: ");
             string username = Console.ReadLine();
 
+            int serverPort=int.Parse(args[0]);
+
             // UDP socket
             Socket udpSocket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
-            IPEndPoint serverEP = new IPEndPoint(IPAddress.Parse(SERVER_IP), SERVER_UDP_PORT);
+            IPEndPoint serverEP = new IPEndPoint(IPAddress.Parse(SERVER_IP), serverPort);
 
             // PRIJAVA
             string message = "PRIJAVA:" + username;
@@ -40,6 +42,9 @@ namespace Client
 
             // LISTA
             udpSocket.SendTo(Encoding.UTF8.GetBytes("LISTA"), serverEP);
+
+     
+
 
             buffer = new byte[BUFFER_SIZE];
             bytes = udpSocket.ReceiveFrom(buffer, ref remoteEP);
@@ -138,14 +143,27 @@ namespace Client
                         Datoteka d = (Datoteka)bf.Deserialize(ms);
 
                         Console.WriteLine("Trenutni sadrzaj: " + d.Sadrzaj);
-                        Console.Write("Novi sadrzaj: ");
-                        d.Sadrzaj = Console.ReadLine();
+                        Console.WriteLine("1) Zameni ceo sadrzaj");
+                        Console.WriteLine("2) Dodaj na postojeci sadrzaj");
+                        Console.Write("Izbor: ");
+                        string izborIzmene = Console.ReadLine();
+
+                        if (izborIzmene == "1")
+                        {
+                            Console.Write("Novi sadrzaj: ");
+                            d.Sadrzaj = Console.ReadLine();
+                        }
+                        else if (izborIzmene == "2")
+                        {
+                            Console.Write("Tekst za dodavanje: ");
+                            string dodatak = Console.ReadLine();
+                            d.Sadrzaj += dodatak;
+                        }
 
                         bf = new BinaryFormatter();
                         ms = new MemoryStream();
                         bf.Serialize(ms, d);
                         rmSocket.Send(ms.ToArray());
-
                         byte[] ok = new byte[BUFFER_SIZE];
                         int okBytes = rmSocket.Receive(ok);
                         Console.WriteLine(Encoding.UTF8.GetString(ok, 0, okBytes));
