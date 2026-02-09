@@ -141,7 +141,7 @@ namespace Client
                         bf = new BinaryFormatter();
                         ms = new MemoryStream(b, 0, n);
                         Datoteka d = (Datoteka)bf.Deserialize(ms);
-
+                        //zadatak 6
                         Console.WriteLine("Trenutni sadrzaj: " + d.Sadrzaj);
                         Console.WriteLine("1) Zameni ceo sadrzaj");
                         Console.WriteLine("2) Dodaj na postojeci sadrzaj");
