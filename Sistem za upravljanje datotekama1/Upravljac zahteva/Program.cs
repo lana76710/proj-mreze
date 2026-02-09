@@ -54,12 +54,16 @@ namespace Upravlac_zahteva
                     {
                         Socket c = listenClients.Accept();
                         clients.Add(c);
+                        Console.WriteLine("Klijent TCP povezan: " + c.RemoteEndPoint);
+
 
                         // primi username odmah po konekciji
                         byte[] userBuf = new byte[BUFFER_SIZE];
                         int userBytes = c.Receive(userBuf);
                         string username = Encoding.UTF8.GetString(userBuf, 0, userBytes);
                         userByClient[c] = username;
+
+                        Console.WriteLine($"Korisnik '{username}' se prijavio.");
                         continue;
                     }
 
